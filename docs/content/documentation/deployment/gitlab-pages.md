@@ -44,52 +44,27 @@ We provide you with a template to accomplish this task easily.
 Create a file called `.gitlab-ci.yml` in the root directory of your
 repository and copy the contents of the template below.
 
-Make sure you specify a version of Zola in the `ZOLA_VERSION` variable.
-
 ```yaml
-stages:
-  - deploy
-
-default:
-  image: debian:stable-slim
-
+image: alpine:latest
 variables:
-  # The runner will be able to pull your Zola theme when the strategy is
-  # set to "recursive".
-  GIT_SUBMODULE_STRATEGY: "recursive"
-
-  # Make sure you specify a version of Zola here.
-  # Use the semver format (x.y.z) to specify a version.
-  # For example: "0.17.2" or "0.18.0".
-  ZOLA_VERSION:
-    description: "The version of Zola used to build the site."
-    value: ""
+  # Setting for CI runner to clone theme submodules
+  GIT_SUBMODULE_STRATEGY: recursive
 
 pages:
-  stage: deploy
   script:
-    - |
-      apt-get update
-      DEBIAN_FRONTEND=noninteractive apt-get install --assume-yes --no-install-recommends wget ca-certificates
-      zola_url="https://github.com/getzola/zola/releases/download/v${ZOLA_VERSION}/zola-v${ZOLA_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
-      if ! wget --quiet --spider $zola_url; then
-        echo "A Zola release with the specified version could not be found."
-        exit 1
-      fi
-      wget $zola_url
-      tar -xzf *.tar.gz
-      ./zola build --base-url $CI_PAGES_URL
+    # Install the latest zola package from the alpine community repositories
+    - apk add --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/community/ zola
+    # Execute zola build
+    - zola build
 
   artifacts:
     paths:
-      # This is the directory whose contents will be deployed to the GitLab Pages server.
-      # GitLab Pages expects a directory with this name by default.
+      # Publish artifacts from the public dir following `zola build`
       - public
 
-  rules:
-    # This rule makes it so that your website is published and updated only when
-    # you push to the default branch of your repository (e.g. "master" or "main").
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  # Publish changes to the main branch only
+  only:
+    - main
 ```
 
 Please, keep in mind that this template assumes you are using the
